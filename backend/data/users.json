@@ -1,0 +1,30 @@
+[
+  {
+    "id": "zB3cuZTS",
+    "username": "Arin",
+    "password": "12345",
+    "role": "tourist",
+    "token": "Jyu5hPXez_1ducWD"
+  },
+  {
+    "id": "PmqooQDf",
+    "username": "Aman",
+    "password": "12345",
+    "role": "police",
+    "token": "CWFdAK-Dx9OFARu0"
+  },
+  {
+    "id": "rImlf5z1",
+    "username": "Ishan",
+    "password": "12345",
+    "role": "tourist",
+    "token": "ftAhRaq73ia4NuvU"
+  },
+  {
+    "id": "PPROIbYr",
+    "username": "Aryan",
+    "password": "8668865955",
+    "role": "police",
+    "token": "1I8jPVRENcMMYLpG"
+  }
+]

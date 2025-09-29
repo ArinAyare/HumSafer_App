@@ -1,0 +1,306 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>HUMSAFER — Smart Tourist Safety</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root{ --bg:#0b0b0b; --card:#111111; --accent:#ff6a00; --muted:#999; color-scheme: dark; }
+    body{ background:var(--bg); color:#fff; font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto; margin:0; padding:18px; }
+    .topbar{ display:flex; align-items:center; gap:12px; }
+    .logo{ width:56px; height:56px; border-radius:10px; background:#222; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    h1{ margin:0; font-size:20px; color:var(--accent); }
+    .tag{ color:var(--muted); font-size:13px; }
+    .card{ background:var(--card); border-radius:10px; padding:12px; margin-top:12px; box-shadow: 0 6px 18px rgba(0,0,0,0.6); }
+    input, select, button, textarea { background:#0f0f0f; border:1px solid #222; color:#fff; padding:8px; border-radius:6px; width:100%; box-sizing:border-box; margin-top:8px; }
+    button.primary{ background:var(--accent); color:#000; border:none; cursor:pointer; padding:10px 14px; font-weight:600; }
+    .row{ display:flex; gap:8px; }
+    .col{ flex:1; }
+    #map{ height:400px; border-radius:8px; overflow:hidden; margin-top:10px; }
+    .small{ font-size:13px; color:var(--muted); }
+    .flex{ display:flex; gap:8px; align-items:center; }
+    .badge{ background:#161616; border:1px solid #222; padding:6px 8px; border-radius:8px; color:var(--muted); }
+    .sos{ background:#ff3b30; color:#fff; border:none; padding:12px 16px; font-weight:700; border-radius:8px; cursor:pointer; }
+    .hidden{ display:none; }
+    .center{ text-align:center; }
+    footer{ margin-top:18px; color:var(--muted); font-size:13px; text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo"><img src="assets/logo.png" alt="logo" style="width:100%; display:block;"></div>
+    <div>
+      <h1>HUMSAFER</h1>
+      <div class="tag">Smart Tourist Safety & Incident Response</div>
+    </div>
+  </div>
+
+  <div id="authCard" class="card">
+    <h3>Welcome — Login or Register</h3>
+    <div id="authForms">
+      <div style="display:flex; gap:8px;">
+        <button id="showLogin" class="primary" style="flex:1;">Login</button>
+        <button id="showRegister" style="flex:1; background:#222; color:#fff; border:1px solid #333;">Register</button>
+      </div>
+
+      <div id="loginForm" class="hidden">
+        <input id="login_user" placeholder="Username" />
+        <input id="login_pass" placeholder="Password" type="password" />
+        <button class="primary" onclick="doLogin()">Sign in</button>
+      </div>
+
+      <div id="regForm" class="hidden">
+        <input id="reg_user" placeholder="Choose username" />
+        <input id="reg_pass" placeholder="Choose password" type="password" />
+        <select id="reg_role">
+          <option value="tourist">Tourist</option>
+          <option value="police">Police</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="primary" onclick="doRegister()">Create account</button>
+      </div>
+
+      <div id="authMsg" class="small"></div>
+    </div>
+  </div>
+
+  <!-- Tourist Dashboard -->
+  <div id="touristDash" class="card hidden">
+    <div class="row">
+      <div class="col">
+        <h3>Tourist Dashboard</h3>
+        <div class="small">Safety score for your current area:</div>
+        <div id="safetyScore" class="badge" style="margin-top:8px; font-size:18px; color:var(--accent);">--</div>
+
+        <div style="margin-top:12px;">
+          <button class="sos" onclick="sendSOS()">SOS — Send Help</button>
+        </div>
+
+        <div style="margin-top:12px;">
+          <label><input type="checkbox" id="liveTrackOpt" /> Share live location (opt-in)</label>
+        </div>
+
+        <div id="touristStatus" class="small" style="margin-top:8px;">Not sharing location</div>
+      </div>
+
+      <div class="col">
+        <h3>Last Alerts Near You</h3>
+        <pre id="touristAlerts" style="max-height:300px; overflow:auto;"></pre>
+      </div>
+    </div>
+
+    <div id="map" ></div>
+  </div>
+
+  <!-- Police Dashboard -->
+  <div id="policeDash" class="card hidden">
+    <h3>Police Dashboard — Live Alerts</h3>
+    <div class="row">
+      <div class="col">
+        <div class="small">Live Alerts</div>
+        <pre id="policeAlerts" style="max-height:250px; overflow:auto;"></pre>
+      </div>
+      <div class="col">
+        <div class="small">Last Known Locations</div>
+        <pre id="lastLocations" style="max-height:250px; overflow:auto;"></pre>
+      </div>
+    </div>
+    <div id="policeMap" style="height:350px; margin-top:10px;"></div>
+  </div>
+
+  <!-- Admin Dashboard -->
+  <div id="adminDash" class="card hidden">
+    <h3>Admin Dashboard</h3>
+    <div class="small">Ledger (tamper-evident)</div>
+    <pre id="adminLedger" style="max-height:300px; overflow:auto;"></pre>
+  </div>
+
+  <footer>HUMSAFER — demo UI • Black & Orange theme</footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const API = 'http://localhost:3000/api';
+    let currentUser = null;
+    document.getElementById('showLogin').onclick = ()=>{
+      document.getElementById('loginForm').classList.toggle('hidden');
+      document.getElementById('regForm').classList.add('hidden');
+    };
+    document.getElementById('showRegister').onclick = ()=>{
+      document.getElementById('regForm').classList.toggle('hidden');
+      document.getElementById('loginForm').classList.add('hidden');
+    };
+
+    async function doRegister(){
+      const username = document.getElementById('reg_user').value;
+      const password = document.getElementById('reg_pass').value;
+      const role = document.getElementById('reg_role').value;
+      const res = await fetch(API + '/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password, role })});
+      const data = await res.json();
+      document.getElementById('authMsg').textContent = JSON.stringify(data);
+    }
+
+    async function doLogin(){
+      const username = document.getElementById('login_user').value;
+      const password = document.getElementById('login_pass').value;
+      const res = await fetch(API + '/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password })});
+      const data = await res.json();
+      if (data && data.user){
+        currentUser = data.user;
+        document.getElementById('authCard').classList.add('hidden');
+        setupDashboardForRole(currentUser.role);
+      } else {
+        document.getElementById('authMsg').textContent = JSON.stringify(data);
+      }
+    }
+
+    function setupDashboardForRole(role){
+      if (role==='tourist') {
+        document.getElementById('touristDash').classList.remove('hidden');
+        initTourist();
+      } else if (role==='police'){
+        document.getElementById('policeDash').classList.remove('hidden');
+        initPolice();
+      } else if (role==='admin'){
+        document.getElementById('adminDash').classList.remove('hidden');
+        loadLedger();
+      }
+    }
+
+    const POIS = [
+      {name:'City Hospital', type:'hospital', lat:26.010, lon:91.005},
+      {name:'Central Bus Stop', type:'bus', lat:26.012, lon:91.008},
+      {name:'Central Police Station', type:'police', lat:26.008, lon:91.002},
+    ];
+
+    let map, policeMap, touristMarker;
+    function initMap(elemId, withPOIs=true){
+      const el = document.getElementById(elemId);
+      if (!el) return null;
+      const m = L.map(el, { zoomControl:true }).setView([26.01,91.005], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(m);
+      if (withPOIs){
+        POIS.forEach(p=>{
+          const color = p.type==='hospital' ? 'red' : (p.type==='police' ? 'blue' : 'orange');
+          const marker = L.circleMarker([p.lat,p.lon], { radius:8, color: color }).addTo(m);
+          marker.bindPopup(p.name + ' ('+p.type+')');
+        });
+      }
+      return m;
+    }
+
+    async function initTourist(){
+      map = initMap('map', true);
+      loadNearbyAlerts();
+      updateSafetyScore();
+      document.getElementById('liveTrackOpt').addEventListener('change', (e)=>{
+        if (e.target.checked) startSharingLocation();
+        else stopSharingLocation();
+      });
+    }
+
+    async function updateSafetyScore(){
+      if (navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(async (pos)=>{
+          const lat = pos.coords.latitude, lon = pos.coords.longitude;
+          const res = await fetch(API + '/safety-score?lat='+lat+'&lon='+lon);
+          const data = await res.json();
+          document.getElementById('safetyScore').textContent = data.score + '/100';
+        }, (err)=>{
+          fetch(API + '/safety-score').then(r=>r.json()).then(d=> document.getElementById('safetyScore').textContent = d.score + '/100');
+        });
+      } else {
+        fetch(API + '/safety-score').then(r=>r.json()).then(d=> document.getElementById('safetyScore').textContent = d.score + '/100');
+      }
+    }
+
+    let trackInterval = null;
+    async function startSharingLocation(){
+      document.getElementById('touristStatus').textContent = 'Sharing location...';
+      if (navigator.geolocation){
+        trackInterval = setInterval(async ()=>{
+          navigator.geolocation.getCurrentPosition(async (pos)=>{
+            const lat = pos.coords.latitude, lon = pos.coords.longitude;
+            await fetch(API + '/track', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ touristId: currentUser.id, lat, lon })});
+            if (!touristMarker) touristMarker = L.marker([lat,lon]).addTo(map);
+            else touristMarker.setLatLng([lat,lon]);
+            map.setView([lat,lon], 14);
+          });
+        }, 5000);
+      } else {
+        document.getElementById('touristStatus').textContent = 'Geolocation not available';
+      }
+    }
+    function stopSharingLocation(){
+      document.getElementById('touristStatus').textContent = 'Not sharing location';
+      if (trackInterval) clearInterval(trackInterval);
+    }
+
+    async function sendSOS(){
+      let lat=26.01, lon=91.005;
+      if (navigator.geolocation){
+        navigator.geolocation.getCurrentPosition((pos)=>{
+          postSOS(pos.coords.latitude, pos.coords.longitude);
+        }, ()=> postSOS(lat, lon));
+      } else postSOS(lat, lon);
+    }
+    async function postSOS(lat, lon){
+      const body = { touristId: currentUser.id, type:'sos', lat, lon, details:'SOS - Help requested', reporter: currentUser.username };
+      const res = await fetch(API + '/alert', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const data = await res.json();
+      alert('SOS sent: ' + JSON.stringify(data));
+    }
+
+    async function loadNearbyAlerts(){
+      const res = await fetch(API + '/alerts');
+      const data = await res.json();
+      document.getElementById('touristAlerts').textContent = JSON.stringify(data, null, 2);
+      if (map){
+        data.forEach(a=>{
+          if (a.lat && a.lon){
+            L.circle([a.lat, a.lon], { radius:40 }).addTo(map).bindPopup('Alert: '+a.type);
+          }
+        });
+      }
+    }
+
+    async function initPolice(){
+      policeMap = initMap('policeMap', true);
+      pollPolice();
+    }
+    async function pollPolice(){
+      setInterval(async ()=>{
+        const res = await fetch(API + '/alerts');
+        const alerts = await res.json();
+        document.getElementById('policeAlerts').textContent = JSON.stringify(alerts, null, 2);
+        const lastLocs = [];
+        for (const a of alerts){
+          if (a.touristId){
+            try{
+              const tl = await fetch(API + '/track/' + a.touristId + '/last').then(r=> r.ok ? r.json() : null);
+              if (tl) lastLocs.push(tl);
+            }catch(e){}
+          }
+        }
+        document.getElementById('lastLocations').textContent = JSON.stringify(lastLocs, null, 2);
+        if (policeMap){
+          policeMap.eachLayer((layer)=>{ if (layer._url) return; policeMap.removeLayer(layer); });
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(policeMap);
+          POIS.forEach(p=> L.circleMarker([p.lat,p.lon], { radius:8 }).addTo(policeMap).bindPopup(p.name));
+          lastLocs.forEach(l=> L.marker([l.lat, l.lon]).addTo(policeMap).bindPopup('Tourist '+l.touristId));
+          alerts.forEach(a=>{
+            if (a.lat && a.lon) L.circle([a.lat, a.lon], { radius:50, color:'#ff6a00' }).addTo(policeMap).bindPopup('Alert: '+a.type);
+          });
+        }
+      }, 6000);
+    }
+
+    async function loadLedger(){
+      const res = await fetch(API + '/ledger');
+      const data = await res.json();
+      document.getElementById('adminLedger').textContent = JSON.stringify(data, null, 2);
+    }
+
+  </script>
+</body>
+</html>
