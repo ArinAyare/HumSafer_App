@@ -1,35 +1,34 @@
-# HUMSAFER - Smart Tourist Safety Monitoring & Incident Response System (MVP)
+# Humsafer – Smart Tourist Safety System
 
-This project is a demo that includes:
-- Login & registration (tourist, police, admin)
-- Role-based dashboards with map and alerts
-- SOS button for tourists sending alerts to police
-- Live tracking (opt-in) for tourists
-- Simple AI analyze endpoint to generate alerts from tracks
-- Black & Orange themed UI and assets
+Humsafer is a full-stack web application designed to enhance **tourist safety** by offering **real-time alerts, SOS emergency support, safety scores, and live map tracking**.  
+The platform aims to make travel safer and more informed with quick access to safety data and emergency tools.
 
-## Quick start
+---
 
-1. Backend:
-   - `cd backend`
-   - `npm install`
-   - `node server.js`
-   - Server runs on http://localhost:3000
+## Features
+- **User Authentication** – Secure login & registration using JWT  
+- **Live Map Tracking** – Google Maps API integration for location-based services  
+- **SOS Button** – One-tap emergency alert system  
+- **Safety Dashboard** – Displays local safety scores, alerts, and travel advisories  
+- **Real-Time Notifications** – Alerts for unsafe zones or emergencies (via Socket.io)  
+- **Fast & Responsive UI** – Powered by Vite + React frontend  
+- **RESTful APIs** – Node.js + Express.js backend  
 
-2. Frontend:
-   - Open `frontend/src/index.html` directly in a modern browser, or serve statically:
-     - `npx http-server frontend/src -p 8080`
-     - Open http://localhost:8080
+---
 
-3. Tourist:
-   - Register as role `tourist`, login, opt-in to share location, try SOS.
+## Tech Stack
+- **Frontend:** React, Vite, Tailwind CSS  
+- **Backend:** Node.js, Express.js  
+- **Database:** MongoDB  
+- **Location Services:** Google Maps API  
+- **Authentication:** JWT-based authentication  
+- **Real-Time Updates:** Socket.io  
 
-4. Police:
-   - Register as role `police`, login to view live alerts & map.
+---
 
-5. Admin:
-   - Register as `admin` to view the ledger.
+## Installation & Setup
 
-Notes:
-- This is a demo. Do NOT store real KYC or passwords this way in production.
-- For production: add TLS, authentication, databases, real blockchain, and secure KYC flows.
+### 1. Clone the repository
+```bash
+git clone https://github.com/yourusername/humsafer.git
+cd humsafer
