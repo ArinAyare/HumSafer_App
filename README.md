@@ -30,5 +30,5 @@ The platform aims to make travel safer and more informed with quick access to sa
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/humsafer.git
+git clone https://github.com/ArinAyare/HumSafer_App
 cd humsafer
